@@ -7,13 +7,20 @@ import ru.pavkin.telegram.api.ChatId
 
 import scala.language.higherKinds
 
+/**
+  * Algebra for managing storage of todo-list items
+  */
 trait TodoListStorage[F[_]] {
   def addItem(chatId: ChatId, item: Item): F[Unit]
   def getItems(chatId: ChatId): F[List[Item]]
   def clearList(chatId: ChatId): F[Unit]
 }
 
-case class InMemoryTodoListStorage[F[_] : Functor](ref: Ref[F, Map[ChatId, List[Item]]]) extends TodoListStorage[F] {
+/**
+  * Simple in-memory implementation of [[TodoListStorage]] algebra, using [[Ref]].
+  * In real world this would go to some database of sort.
+  */
+class InMemoryTodoListStorage[F[_] : Functor](private val ref: Ref[F, Map[ChatId, List[Item]]]) extends TodoListStorage[F] {
 
   def addItem(chatId: ChatId, item: Item): F[Unit] =
     ref.modify(m => m.updated(chatId, item :: m.getOrElse(chatId, Nil))).void

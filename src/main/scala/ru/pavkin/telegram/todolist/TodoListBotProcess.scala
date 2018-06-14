@@ -12,6 +12,11 @@ import ru.pavkin.telegram.api.dto.{BotResponse, BotUpdate}
 
 import scala.language.higherKinds
 
+/**
+  * Creates and wires up everything that is needed to launch a [[TodoListBot]] and launches it.
+  *
+  * @param token telegram bot token
+  */
 class TodoListBotProcess[F[_]](
   token: String)(
   implicit F: Effect[F],
@@ -20,9 +25,9 @@ class TodoListBotProcess[F[_]](
   def run: Stream[F, Unit] = Http1Client.stream[F]().flatMap { client =>
     val streamF = for {
       logger <- Slf4jLogger.create[F]
-      storage <- Ref(Map.empty[ChatId, List[Item]]).map(InMemoryTodoListStorage(_))
+      storage <- Ref(Map.empty[ChatId, List[Item]]).map(new InMemoryTodoListStorage(_))
       botAPI <- F.delay(Http4SBotAPI(token, client, logger))
-      todoListBot <- F.delay(TodoListBot(botAPI, storage, logger))
+      todoListBot <- F.delay(new TodoListBot(botAPI, storage, logger))
     } yield todoListBot.launch
 
     Stream.force(streamF)

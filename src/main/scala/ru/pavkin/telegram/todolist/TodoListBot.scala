@@ -10,20 +10,31 @@ import ru.pavkin.telegram.api._
 import scala.language.higherKinds
 import scala.util.Random
 
-case class TodoListBot[F[_]](
-  api: BotAPI[F, Stream[F, ?]],
+/**
+  * Todo list telegram bot
+  * When launched, polls incoming commands and processes them using todo-list storage algebra.
+  *
+  * @param api     telegram bot api
+  * @param storage storage algebra for todo-list items
+  * @param logger  logger algebra
+  */
+class TodoListBot[F[_]](
+  api: StreamingBotAPI[F],
   storage: TodoListStorage[F],
   logger: Logger[F])(
   implicit F: Effect[F]) {
 
+  /**
+    * Launches the bot process
+    */
   def launch: Stream[F, Unit] = pollCommands.evalMap(handleCommand)
 
-  def pollCommands: Stream[F, BotCommand] = for {
+  private def pollCommands: Stream[F, BotCommand] = for {
     update <- api.pollUpdates(0)
-    pair <- Stream.emits(update.message.flatMap(a => a.text.map(a.chat.id -> _)).toSeq)
-  } yield BotCommand.fromRawMessage(pair._1, pair._2)
+    chatIdAndMessage <- Stream.emits(update.message.flatMap(a => a.text.map(a.chat.id -> _)).toSeq)
+  } yield BotCommand.fromRawMessage(chatIdAndMessage._1, chatIdAndMessage._2)
 
-  def handleCommand(command: BotCommand): F[Unit] = command match {
+  private def handleCommand(command: BotCommand): F[Unit] = command match {
     case c: ClearTodoList => clearTodoList(c.chatId)
     case c: ShowTodoList => showTodoList(c.chatId)
     case c: AddEntry => addItem(c.chatId, c.content)
@@ -35,7 +46,7 @@ case class TodoListBot[F[_]](
     ).mkString("\n"))
   }
 
-  def clearTodoList(chatId: ChatId): F[Unit] = for {
+  private def clearTodoList(chatId: ChatId): F[Unit] = for {
     _ <- storage.clearList(chatId)
     _ <- (
       logger.info(s"todo list cleared for chat $chatId"),
@@ -43,7 +54,7 @@ case class TodoListBot[F[_]](
     ).tupled
   } yield ()
 
-  def showTodoList(chatId: ChatId): F[Unit] = for {
+  private def showTodoList(chatId: ChatId): F[Unit] = for {
     items <- storage.getItems(chatId)
     _ <- (
       logger.info(s"todo list queried for chat $chatId"),
@@ -53,7 +64,7 @@ case class TodoListBot[F[_]](
     ).tupled
   } yield ()
 
-  def addItem(chatId: ChatId, item: String): F[Unit] = for {
+  private def addItem(chatId: ChatId, item: Item): F[Unit] = for {
     _ <- storage.addItem(chatId, item)
     response <- F.suspend(F.catchNonFatal(Random.shuffle(List("Ok!", "Sure!", "Noted", "Certainly!")).head))
     _ <- (
