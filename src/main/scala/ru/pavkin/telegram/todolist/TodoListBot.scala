@@ -48,28 +48,19 @@ class TodoListBot[F[_]](
 
   private def clearTodoList(chatId: ChatId): F[Unit] = for {
     _ <- storage.clearList(chatId)
-    _ <- (
-      logger.info(s"todo list cleared for chat $chatId"),
-      api.sendMessage(chatId, "Your todo-list was cleared!")
-    ).tupled
+    _ <- logger.info(s"todo list cleared for chat $chatId") *> api.sendMessage(chatId, "Your todo-list was cleared!")
   } yield ()
 
   private def showTodoList(chatId: ChatId): F[Unit] = for {
     items <- storage.getItems(chatId)
-    _ <- (
-      logger.info(s"todo list queried for chat $chatId"),
-      api.sendMessage(chatId,
-        if (items.isEmpty) "You have no tasks planned!"
-        else ("Your todo-list:" :: "" :: items.map(" - " + _)).mkString("\n"))
-    ).tupled
+    _ <- logger.info(s"todo list queried for chat $chatId") *> api.sendMessage(chatId,
+      if (items.isEmpty) "You have no tasks planned!"
+      else ("Your todo-list:" :: "" :: items.map(" - " + _)).mkString("\n"))
   } yield ()
 
   private def addItem(chatId: ChatId, item: Item): F[Unit] = for {
     _ <- storage.addItem(chatId, item)
     response <- F.suspend(F.catchNonFatal(Random.shuffle(List("Ok!", "Sure!", "Noted", "Certainly!")).head))
-    _ <- (
-      logger.info(s"entry added for chat $chatId"),
-      api.sendMessage(chatId, response)
-    ).tupled
+    _ <- logger.info(s"entry added for chat $chatId") *> api.sendMessage(chatId, response)
   } yield ()
 }
