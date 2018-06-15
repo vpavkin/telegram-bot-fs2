@@ -41,7 +41,7 @@ trait StreamingBotAPI[F[_]] extends BotAPI[F, Stream[F, ?]]
   * @param client http client algebra
   * @param logger logger algebra
   */
-case class Http4SBotAPI[F[_]](
+class Http4SBotAPI[F[_]](
   token: String,
   client: Client[F],
   logger: Logger[F])(
