@@ -1,11 +1,11 @@
 package ru.pavkin.telegram.todolist
 
 import _root_.io.chrisdavenport.log4cats._
-import cats.effect.Effect
+import cats.effect.Sync
 import cats.implicits._
 import fs2._
-import ru.pavkin.telegram.todolist.BotCommand._
 import ru.pavkin.telegram.api._
+import ru.pavkin.telegram.todolist.BotCommand._
 
 import scala.language.higherKinds
 import scala.util.Random
@@ -22,7 +22,7 @@ class TodoListBot[F[_]](
   api: StreamingBotAPI[F],
   storage: TodoListStorage[F],
   logger: Logger[F])(
-  implicit F: Effect[F]) {
+  implicit F: Sync[F]) {
 
   /**
     * Launches the bot process

@@ -20,7 +20,8 @@ trait TodoListStorage[F[_]] {
   * Simple in-memory implementation of [[TodoListStorage]] algebra, using [[Ref]].
   * In real world this would go to some database of sort.
   */
-class InMemoryTodoListStorage[F[_] : Functor](private val ref: Ref[F, Map[ChatId, List[Item]]]) extends TodoListStorage[F] {
+class InMemoryTodoListStorage[F[_] : Functor](
+  private val ref: Ref[F, Map[ChatId, List[Item]]]) extends TodoListStorage[F] {
 
   def addItem(chatId: ChatId, item: Item): F[Unit] =
     ref.modify(m => m.updated(chatId, item :: m.getOrElse(chatId, Nil))).void

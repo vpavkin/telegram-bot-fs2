@@ -2,7 +2,7 @@ package ru.pavkin.telegram.api
 
 import java.net.URLEncoder
 
-import cats.effect.Effect
+import cats.effect.Sync
 import cats.implicits._
 import fs2.Stream
 import io.chrisdavenport.log4cats.Logger
@@ -49,7 +49,7 @@ case class Http4SBotAPI[F[_]](
   client: Client[F],
   logger: Logger[F])(
   implicit
-  F: Effect[F],
+  F: Sync[F],
   D: EntityDecoder[F, BotResponse[List[BotUpdate]]]) extends StreamingBotAPI[F] {
 
   def sendMessage(chatId: ChatId, message: String): F[Unit] = {
