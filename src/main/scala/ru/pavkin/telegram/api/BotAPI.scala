@@ -1,7 +1,5 @@
 package ru.pavkin.telegram.api
 
-import java.net.URLEncoder
-
 import cats.effect.Sync
 import cats.implicits._
 import fs2.Stream
@@ -11,7 +9,6 @@ import org.http4s.{EntityDecoder, Uri}
 import ru.pavkin.telegram.api.dto.{BotResponse, BotUpdate}
 
 import scala.language.higherKinds
-import scala.util.Try
 
 /**
   * Simplified bot api algebra that exposes only APIs required for this project
@@ -52,14 +49,18 @@ case class Http4SBotAPI[F[_]](
   F: Sync[F],
   D: EntityDecoder[F, BotResponse[List[BotUpdate]]]) extends StreamingBotAPI[F] {
 
-  def sendMessage(chatId: ChatId, message: String): F[Unit] = {
-    val uri = Uri.fromString(
-      s"https://api.telegram.org/bot$token/sendMessage?chat_id=$chatId&parse_mode=Markdown&text=${URLEncoder.encode(message, "UTF-8")}")
+  private val botApiUri: Uri = Uri.uri("https://api.telegram.org") / s"bot$token"
 
-    for {
-      u <- F.fromEither(uri)
-      _ <- client.expect[Unit](u)
-    } yield ()
+  def sendMessage(chatId: ChatId, message: String): F[Unit] = {
+
+    // safely build a uri to query
+    val uri = botApiUri / "sendMessage" =? Map(
+      "chat_id" -> Seq(chatId.toString),
+      "parse_mode" -> Seq("Markdown"),
+      "text" -> Seq(message)
+    )
+
+    client.expect[Unit](uri) // run the http request and ignore the result body.
   }
 
   def pollUpdates(fromOffset: Offset): Stream[F, BotUpdate] =
@@ -68,19 +69,24 @@ case class Http4SBotAPI[F[_]](
       .flatMap { case (_, response) => Stream.emits(response.result) }
 
   private def requestUpdates(offset: Offset): F[(Offset, BotResponse[List[BotUpdate]])] = {
-    val pollURI = Uri.fromString(
-      s"https://api.telegram.org/bot$token/getUpdates?offset=${offset + 1}&timeout=0.5")
 
-    val requestIO = for {
-      uri <- F.fromEither(pollURI)
-      response <- client.expect[BotResponse[List[BotUpdate]]](uri)
-    } yield (lastOffset(response).getOrElse(offset), response)
+    val uri = botApiUri / "getUpdates" =? Map(
+      "offset" -> Seq((offset + 1).toString),
+      "timeout" -> Seq("0.5"), // timeout to throttle the polling
+      "allowed_updates" -> Seq("""["message"]""")
+    )
 
-    requestIO.recoverWith {
-      case ex => logger.error(ex)("Failed to poll updates").as(offset -> BotResponse(ok = true, Nil))
-    }
+    client.expect[BotResponse[List[BotUpdate]]](uri)
+      .map(response => (lastOffset(response).getOrElse(offset), response))
+      .recoverWith {
+        case ex => logger.error(ex)("Failed to poll updates").as(offset -> BotResponse(ok = true, Nil))
+      }
   }
 
+  // just get the maximum id out of all received updates
   private def lastOffset(response: BotResponse[List[BotUpdate]]): Option[Offset] =
-    Try(response.result.maxBy(_.update_id).update_id).toOption
+    response.result match {
+      case Nil => None
+      case nonEmpty => Some(nonEmpty.maxBy(_.update_id).update_id)
+    }
 }
