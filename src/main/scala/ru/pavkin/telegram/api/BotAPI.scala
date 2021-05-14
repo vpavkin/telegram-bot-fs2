@@ -3,12 +3,10 @@ package ru.pavkin.telegram.api
 import cats.effect.Sync
 import cats.implicits._
 import fs2.Stream
-import io.chrisdavenport.log4cats.Logger
 import org.http4s.client.Client
 import org.http4s.{EntityDecoder, Uri}
+import org.typelevel.log4cats.Logger
 import ru.pavkin.telegram.api.dto.{BotResponse, BotUpdate}
-
-import scala.language.higherKinds
 
 /**
   * Simplified bot api algebra that exposes only APIs required for this project
@@ -31,7 +29,7 @@ trait BotAPI[F[_], S[_]] {
   def pollUpdates(fromOffset: Offset): S[BotUpdate]
 }
 
-trait StreamingBotAPI[F[_]] extends BotAPI[F, Stream[F, ?]]
+trait StreamingBotAPI[F[_]] extends BotAPI[F, Stream[F, *]]
 
 /**
   * Single bot API instance with http4s client.
@@ -55,9 +53,9 @@ class Http4SBotAPI[F[_]](
 
     // safely build a uri to query
     val uri = botApiUri / "sendMessage" =? Map(
-      "chat_id" -> Seq(chatId.toString),
-      "parse_mode" -> Seq("Markdown"),
-      "text" -> Seq(message)
+      "chat_id" -> List(chatId.toString),
+      "parse_mode" -> List("Markdown"),
+      "text" -> List(message)
     )
 
     client.expect[Unit](uri) // run the http request and ignore the result body.
@@ -71,9 +69,9 @@ class Http4SBotAPI[F[_]](
   private def requestUpdates(offset: Offset): F[(Offset, BotResponse[List[BotUpdate]])] = {
 
     val uri = botApiUri / "getUpdates" =? Map(
-      "offset" -> Seq((offset + 1).toString),
-      "timeout" -> Seq("0.5"), // timeout to throttle the polling
-      "allowed_updates" -> Seq("""["message"]""")
+      "offset" -> List((offset + 1).toString),
+      "timeout" -> List("0.5"), // timeout to throttle the polling
+      "allowed_updates" -> List("""["message"]""")
     )
 
     client.expect[BotResponse[List[BotUpdate]]](uri)
