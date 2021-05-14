@@ -1,13 +1,12 @@
 package ru.pavkin.telegram.todolist
 
-import _root_.io.chrisdavenport.log4cats._
 import cats.effect.Sync
 import cats.implicits._
 import fs2._
+import org.typelevel.log4cats._
 import ru.pavkin.telegram.api._
 import ru.pavkin.telegram.todolist.BotCommand._
 
-import scala.language.higherKinds
 import scala.util.Random
 
 /**
@@ -60,7 +59,7 @@ class TodoListBot[F[_]](
 
   private def addItem(chatId: ChatId, item: Item): F[Unit] = for {
     _ <- storage.addItem(chatId, item)
-    response <- F.suspend(F.catchNonFatal(Random.shuffle(List("Ok!", "Sure!", "Noted", "Certainly!")).head))
+    response <- F.defer(F.catchNonFatal(Random.shuffle(List("Ok!", "Sure!", "Noted", "Certainly!")).head))
     _ <- logger.info(s"entry added for chat $chatId") *> api.sendMessage(chatId, response)
   } yield ()
 }
