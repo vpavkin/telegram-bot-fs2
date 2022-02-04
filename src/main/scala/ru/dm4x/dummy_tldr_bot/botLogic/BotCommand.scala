@@ -16,6 +16,6 @@ object BotCommand {
     case _ => SilentWatcher(chatId)
   }
 
-  val help = "?"
+  val help = "/help"
   val tldr = "/tldr"
 }
