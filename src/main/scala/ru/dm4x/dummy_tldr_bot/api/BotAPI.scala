@@ -1,4 +1,4 @@
-package ru.pavkin.telegram.api
+package ru.dm4x.dummy_tldr_bot.api
 
 import cats.effect.Sync
 import cats.implicits._
@@ -6,7 +6,7 @@ import fs2.Stream
 import io.chrisdavenport.log4cats.Logger
 import org.http4s.client.Client
 import org.http4s.{EntityDecoder, Uri}
-import ru.pavkin.telegram.api.dto.{BotResponse, BotUpdate}
+import ru.dm4x.dummy_tldr_bot.api.dto.{BotResponse, BotUpdate}
 
 import scala.language.higherKinds
 

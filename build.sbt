@@ -7,9 +7,9 @@ val circeVersion = "0.9.2"
 
 lazy val root = (project in file("."))
   .settings(
-    organization := "ru.pavkin",
-    name := "telegram-bot-fs2",
-    version := "0.0.1-SNAPSHOT",
+    organization := "ru.dm4x",
+    name := "dummy_tldr_bot",
+    version := "1.0.0-SNAPSHOT",
     scalaVersion := "2.12.6",
     libraryDependencies ++= Seq(
       compilerPlugin("org.spire-math" %% "kind-projector" % kindProjectorVersion),
@@ -22,5 +22,11 @@ lazy val root = (project in file("."))
       "org.slf4j" % "slf4j-simple" % slf4jVersion,
       "org.specs2" %% "specs2-core" % specs2Version % "test"
     )
+  )
+
+lazy val app = (project in file("app"))
+  .settings(
+    assembly / assemblyJarName := "dummyTldrBot.jar",
+    assembly / mainClass := Some("ru.dm4x.dummy_tldr_bot.botLogic.App"),
   )
 
