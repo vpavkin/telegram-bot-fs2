@@ -5,6 +5,7 @@ import cats.effect.Sync
 import cats.implicits._
 import fs2._
 import ru.dm4x.dummy_tldr_bot.api._
+import ru.dm4x.dummy_tldr_bot.api.dto.BotMessage
 import ru.dm4x.dummy_tldr_bot.botLogic.BotCommand._
 
 import scala.language.higherKinds
@@ -30,8 +31,8 @@ class TldrBot[F[_]](
 
   private def pollCommands: Stream[F, BotCommand] = for {
     update <- api.pollUpdates(0)
-    chatIdAndMessage <- Stream.emits(update.message.flatMap(a => a.text.map(a.chat.id -> _)).toSeq)
-  } yield BotCommand.fromRawMessage(chatIdAndMessage._1, chatIdAndMessage._2)
+    botMessage <- Stream.emits(update.message.flatMap(a => BotMessage(a.message_id, a.from, a.chat, a.date, a.text).some).toSeq)
+  } yield BotCommand.fromRawMessage(botMessage)
 
   private def handleCommand(command: BotCommand): F[Unit] = command match {
     case c: Tldr => showRandomJoke(c.chatId)
@@ -40,7 +41,7 @@ class TldrBot[F[_]](
       s"`$help` - покажет этот хелп",
       s"`$tldr` - постараюсь рассказать о чем там выше писали",
     ).mkString("\n"))
-    case c: SilentWatcher => F.pure()
+    case c: SilentWatcher => logger.info(s"raw message from chat: ${c.message}")
   }
 
   private def showRandomJoke(chatId: ChatId): F[Unit] = for {
